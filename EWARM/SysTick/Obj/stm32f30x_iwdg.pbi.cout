@@ -10,6 +10,8 @@ C:\Users\Marco\Desktop\Esempi miei\Project\Lab\TSCH_Protocol\EWARM\..\..\..\..\L
 -I
 C:\Users\Marco\Desktop\Esempi miei\Project\Lab\TSCH_Protocol\EWARM\..\..\..\..\Utilities\STM32F3_Discovery
 -I
+C:\Users\Marco\Desktop\Esempi miei\Project\Lab\TSCH_Protocol\EWARM\..\..\..\..\Libraries\STM32_USB-FS-Device_Driver\inc
+-I
 C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\CMSIS\Include
 -I
 C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\inc
@@ -23,6 +25,8 @@ C:\Users\Marco\Desktop\Esempi miei\Libraries\CMSIS\Device\ST\STM32F30x\Include
 C:\Users\Marco\Desktop\Esempi miei\Libraries\STM32F30x_StdPeriph_Driver\inc
 -I
 C:\Users\Marco\Desktop\Esempi miei\Utilities\STM32F3_Discovery
+-I
+C:\Users\Marco\Desktop\Esempi miei\Libraries\STM32_USB-FS-Device_Driver\inc
 -I
 C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.2\arm\CMSIS\Include
 -DUSE_STDPERIPH_DRIVER=1

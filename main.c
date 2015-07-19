@@ -38,10 +38,21 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+
+#define N_TIME_SLOT 5
+#define TSLOT_ID 0
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 GPIO_InitTypeDef GPIO_InitStructure;
+TIM_OCInitTypeDef TIM_OCInitStructure;
 static __IO uint32_t TimingDelay;
+
+char message[] = "STAY";
+
+uint32_t asn = 0;
+int ts_enable_transmision = 0;
+int debug = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay(__IO uint32_t nTime);
@@ -55,6 +66,7 @@ void led_init()
 
 void usart_init()
 {
+  //GPIO A
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_7);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_7);
@@ -81,20 +93,74 @@ void usart_init()
   USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;    
   USART_Init(USART1, &USART_InitStructure);
   
-  // enable interrrupt 
-  USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-
-  //Enable USART Interrrupt
-  NVIC_InitTypeDef NVIC_InitStructure;
-  
-  NVIC_InitStructure.NVIC_IRQChannel=USART1_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 7;
-  NVIC_InitStructure.NVIC_IRQChannelCmd=ENABLE;
-  NVIC_Init(&NVIC_InitStructure);  
-  
+  // enable interrupt 
+  USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);  
   
   USART_Cmd(USART1, ENABLE);
+}
+
+void TIM_Config(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+ 
+  /* TIM3 clock enable */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+ 
+  /* GPIOC clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
+   
+  /* GPIOC Configuration: TIM3 CH1 (PC6) */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 ;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOC, &GPIO_InitStructure); 
+ 
+  /* Connect TIM3 pins to AF2 */ 
+  GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_2);
+}
+
+void PWM_Config()
+{
+  TIM_OCInitTypeDef TIM_OCInitStructure;
+  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+  /* Time base configuration */
+  TIM_TimeBaseStructure.TIM_Period = 10000;
+  TIM_TimeBaseStructure.TIM_Prescaler = 7200 - 1;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  /* PWM1 Mode configuration: Channel1 */
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = 10000;
+  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+  TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+  TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
+  
+  TIM_ARRPreloadConfig(TIM3, ENABLE);
+  /* TIM3 enable counter */
+  TIM_Cmd(TIM3, ENABLE);
+  
+  /* TIM3 enable interrupt */
+  TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+}
+
+void EnableInterrupt()
+{
+    NVIC_InitTypeDef nvicStructure;
+    nvicStructure.NVIC_IRQChannel = TIM3_IRQn;
+    nvicStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    nvicStructure.NVIC_IRQChannelSubPriority = 1;
+    nvicStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&nvicStructure);
+    
+    nvicStructure.NVIC_IRQChannel=USART1_IRQn;
+    nvicStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    nvicStructure.NVIC_IRQChannelSubPriority = 1;
+    nvicStructure.NVIC_IRQChannelCmd=ENABLE;
+    NVIC_Init(&nvicStructure);
 }
 
 /**
@@ -121,14 +187,56 @@ int main(void)
   
   led_init();
   usart_init();
+  
+  TIM_Config();
+  PWM_Config();
+  EnableInterrupt();
 
   while (1)
   {
-  
+    /*
+    if((asn % N_TIME_SLOT == TSLOT_ID) && (ts_enable_transmision == 1))
+    {
+      ts_enable_transmision = 0;
+      
+      for(int i=0; i < 4; i++)
+      {
+        while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+        USART_SendData(USART1, message[i]);
+      }
+    }*/
+      
   }
 }
 
 //Funzioni implementate da me
+
+void TIM3_IRQHandler()
+{
+  if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
+  {
+    TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+    
+    if(asn++ % N_TIME_SLOT == TSLOT_ID)
+    {
+        ts_enable_transmision = 1;
+        //TIM3 -> CCR1 = 10000;
+        
+        for(int i=0; i < 4; i++)
+        {
+          while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+          USART_SendData(USART1, message[i]);
+        }
+    }
+    else
+    {
+      /*Se spengo il modulo xbee non funziona appena lo riaccendo
+      Xbee probabilmente ci sta tropo ad avviarsi */
+      //TIM3 -> CCR1 = 0;      
+    }
+  }
+}
+
 void USART1_IRQHandler(void)
 {
   if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)

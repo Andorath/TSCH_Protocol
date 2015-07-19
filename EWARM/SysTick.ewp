@@ -319,6 +319,7 @@
           <state>$PROJ_DIR$\..\..\..\..\Libraries\CMSIS\Device\ST\STM32F30x\Include</state>
           <state>$PROJ_DIR$\..\..\..\..\Libraries\STM32F30x_StdPeriph_Driver\inc</state>
           <state>$PROJ_DIR$\..\..\..\..\Utilities\STM32F3_Discovery</state>
+          <state>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB-FS-Device_Driver\inc</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
